@@ -2,6 +2,8 @@ github.com/google/gopacket v1.1.19 h1:ves8RnFZPGiFnTS0uPQStjwru6uO6h+nlr9j6fL7kF
 github.com/google/gopacket v1.1.19/go.mod h1:iJ8V8n6KS+z2U1A8pUwu8bW5SyEMkXJB8Yo/Vo+TKTo=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+github.com/randolphcyg/gowireshark v0.0.0-20240207025218-315bbf67509d h1:fxd03tEFepM/3omuJkBVwxS7hwNnCN+8ef4uc5ZNB+E=
+github.com/randolphcyg/gowireshark v0.0.0-20240207025218-315bbf67509d/go.mod h1:ytbmghM+x1vhEuGSfRIZgKjKOLSpoqeUGAl4IKzXHAM=
 github.com/randolphcyg/gowireshark v1.10.6 h1:ge7y/vdkVysGgp2pAluoJrX6XC7l02WJ8y6vFSi4LsM=
 github.com/randolphcyg/gowireshark v1.10.6/go.mod h1:v4uqX5evJhk+gHK+G+wUKo6OkH5Q5Bj6+zi+AXn564M=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

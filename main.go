@@ -4,9 +4,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
+	"github.com/randolphcyg/gowireshark"
 )
 
 var (
@@ -18,47 +16,30 @@ func main() {
 	// parse flags
 	flag.Parse()
 
-	// read pcap file
-	pcapHandler, err := pcap.OpenOffline(*pcapFile)
-	if err != nil {
-		panic(err)
-	}
-	defer pcapHandler.Close()
-	packetSource := gopacket.NewPacketSource(pcapHandler, pcapHandler.LinkType())
-	for i := 0; i < *packetNumber-1; i++ {
-		_, err := packetSource.NextPacket()
-		if err != nil {
-			panic(err)
-		}
-
-	}
-	pkt, err := packetSource.NextPacket()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(gopacket.LayerDump(pkt.Layers()[2]))
-}
-
-func decodeLayer2(data []byte) (map[string]interface{}, error) {
-	decodedFields := make(map[string]interface{})
-
-	// Parse header based on known Layer 2 protocol
-	ethLayer := layers.Ethernet{}
-	err := ethLayer.DecodeFromBytes(data, gopacket.NilDecodeFeedback)
+	// read frame in to buffer
+	frameData, err := gowireshark.GetSpecificFrameProtoTreeInJson(*pcapFile, *packetNumber, true, true)
 	if err != nil {
 		panic(err)
 	}
 
-	decodedFields["Protocol"] = ethLayer.EthernetType.String()
-	decodedFields["Destination MAC"] = ethLayer.DstMAC.String()
-	decodedFields["Source MAC"] = ethLayer.SrcMAC.String()
-	// Add more fields specific to Ethernet header
-
-	// Add payload information if applicable
-	payload := data[ethLayer.LayerType():]
-	if len(payload) > 0 {
-		decodedFields["Payload"] = payload
+	colSrc := frameData.WsSource.Layers["_ws.col"]
+	col, err := gowireshark.UnmarshalWsCol(colSrc)
+	if err != nil {
+		fmt.Println(err)
 	}
 
-	return decodedFields, err
+	frameSrc := frameData.WsSource.Layers["frame"]
+	frame, err := gowireshark.UnmarshalFrame(frameSrc)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("# Frame index:", col.Num)
+	fmt.Println("## WsIndex:", frameData.WsIndex)
+	fmt.Println("## Offset:", frameData.Offset)
+	fmt.Println("## Hex:", frameData.Hex)
+	fmt.Println("## Ascii:", frameData.Ascii)
+
+	fmt.Println("【layer _ws.col】:", col)
+	fmt.Println("【layer frame】:", frame)
 }
