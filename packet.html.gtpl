@@ -24,14 +24,11 @@
     .toggle:checked ~ .field {
       display: none;
     }
-    /*
+    
     .field-name {
-      width: 50%;
+      height: 4em;
     }
-    .field-value {
-      width: 50%;
-    }
-     */
+
   </style>
 </head>
 <body>
@@ -47,8 +44,8 @@
           <span class="field-item field-value">{{ $contents }}</span>
           <span class="field-item field-size">{{ sizeof $contents }} bytes</span>
           <button class="deletebutton" onclick="document.getElementById('{{ $field }}').style.display = 'none';">Delete</button> 
-          <button class="deletebutton" class="up">Left</button>
-          <button class="deletebutton" class="down">Right</button>
+          <button class="up deletebutton">Left</button>
+          <button class="down deletebutton">Right</button>
         </div>
         {{ end }}
       {{- end }}

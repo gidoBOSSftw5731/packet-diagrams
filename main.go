@@ -132,7 +132,7 @@ func fieldchange(v interface{}) string {
 	case "ip.dst":
 		return "Destination IP"
 	case "ip.proto":
-		return "Protocol"
+		return "Layer 3 Protocol"
 	case "ip.ttl":
 		return "TTL"
 	case "ip.hdr_len":
