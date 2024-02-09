@@ -18,6 +18,7 @@ import (
 var (
 	pcapFile     *string = flag.String("pcap", "test.pcap", "pcap file to read")
 	packetNumber *int    = flag.Int("packet", 0, "packet number to read")
+	sorted       *string = flag.String("sort", "", "sort fields automatically based on protocol")
 )
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("%#v\n\n", frameData.WsSource.Layers["icmp"])
+	fmt.Printf("%#v\n\n", frameData.WsSource.Layers)
 
 	// load text template from packet.html
 	// read packet.html.gtpl into string
@@ -88,11 +89,56 @@ func main() {
 	newMap := make(map[string]interface{})
 	//newMap["1"] = frameData.WsSource.Layers["frame"]
 	newMap["2"] = frameData.WsSource.Layers["eth"]
-	newMap["3"] = frameData.WsSource.Layers["ip"]
-	newMap["4"] = frameData.WsSource.Layers["icmp"]
-	newMap["5"] = map[string]interface{}{
-		"Data": hexToASCII(
-			frameData.WsSource.Layers["icmp"].(map[string]interface{})["data"].(map[string]interface{})["data.data"].(string)),
+	if frameData.WsSource.Layers["eth"].(map[string]interface{})["eth.type"].(string) == "0x0800" {
+		newMap["3"] = frameData.WsSource.Layers["ip"]
+		// check if ICMP
+		if frameData.WsSource.Layers["ip"].(map[string]interface{})["ip.proto"].(string) == "1" {
+			newMap["4"] = frameData.WsSource.Layers["icmp"]
+			// check if data exists
+			if _, ok := frameData.WsSource.Layers["icmp"].(map[string]interface{})["data"]; ok {
+				newMap["5"] = map[string]interface{}{
+					"Data": hexToASCII(
+						frameData.WsSource.Layers["icmp"].(map[string]interface{})["data"].(map[string]interface{})["data.data"].(string)),
+				}
+			}
+		}
+		// check if UDP
+	}
+	// check if arp
+	if frameData.WsSource.Layers["eth"].(map[string]interface{})["eth.type"].(string) == "0x0806" {
+		newMap["3"] = frameData.WsSource.Layers["arp"]
+	}
+
+	// check if sort is set
+	// yes this does mean that everything above is redundant but I don't want another nested if
+	// this code is *really bad* but it's not meant to be maintained.
+	if *sorted != "" {
+		newMap = make(map[string]interface{})
+		eth, _ := frameData.WsSource.Layers["eth"].(map[string]interface{})
+		ip, _ := frameData.WsSource.Layers["ip"].(map[string]interface{})
+		order := []map[string]interface{}{{"eth.dst": eth["eth.dst"].(string)}, {"eth.src": eth["eth.src"].(string)},
+			{"eth.type": eth["eth.type"].(string)}, {"ip.version": ip["ip.version"].(string)},
+			{"ip.hdr_len": ip["ip.hdr_len"].(string)}, {"ip.dsfield": ip["ip.dsfield"].(string)},
+			{"ip.len": ip["ip.len"].(string)}, {"ip.id": ip["ip.id"].(string)}, {"ip.flags": ip["ip.flags"].(string)},
+			{"ip.frag_offset": ip["ip.frag_offset"].(string)}, {"ip.ttl": ip["ip.ttl"].(string)},
+			{"ip.proto": ip["ip.proto"].(string)}, {"ip.checksum": ip["ip.checksum"].(string)},
+			{"ip.src": ip["ip.src"].(string)}, {"ip.dst": ip["ip.dst"].(string)}}
+
+		switch *sorted {
+		case "icmp":
+			icmp, _ := frameData.WsSource.Layers["icmp"].(map[string]interface{})
+			order = append(order,
+				map[string]interface{}{"icmp.type": icmp["icmp.type"].(string)}, map[string]interface{}{"icmp.code": icmp["icmp.code"].(string)},
+				map[string]interface{}{"icmp.checksum": icmp["icmp.checksum"].(string)}, map[string]interface{}{"icmp.ident": icmp["icmp.ident"].(string)},
+				map[string]interface{}{"icmp.seq": icmp["icmp.seq"].(string)})
+		default:
+			panic("Invalid sort")
+		}
+
+		for k, v := range order {
+			newMap[fmt.Sprintf("%5v", k)] = v
+		}
+
 	}
 
 	t, err := template.New("packet").Funcs(funcMap).Parse(string(tmplFile))
@@ -163,6 +209,24 @@ func fieldchange(v interface{}) string {
 		return "ICMP Sequence Number"
 	case "icmp.data":
 		return "ICMP Data"
+	case "arp.hw.type":
+		return "ARP Hardware Type"
+	case "arp.proto.type":
+		return "ARP Protocol Type"
+	case "arp.hw.size":
+		return "ARP Hardware Size"
+	case "arp.proto.size":
+		return "ARP Protocol Size"
+	case "arp.opcode":
+		return "ARP Opcode"
+	case "arp.src.hw_mac":
+		return "ARP Source MAC"
+	case "arp.src.proto_ipv4":
+		return "ARP Source IP"
+	case "arp.dst.hw_mac":
+		return "ARP Target MAC"
+	case "arp.dst.proto_ipv4":
+		return "ARP Target IP"
 	}
 	return v.(string)
 
