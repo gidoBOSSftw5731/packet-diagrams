@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/randolphcyg/gowireshark"
@@ -28,7 +30,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("%#v\n\n", frameData.WsSource.Layers["ip"])
+	fmt.Printf("%#v\n\n", frameData.WsSource.Layers["icmp"])
 
 	// load text template from packet.html
 	// read packet.html.gtpl into string
@@ -45,16 +47,6 @@ func main() {
 
 			switch fmt.Sprintf("%T", v) {
 			case "string":
-				// check if v is in hex colon notation
-				// if so, return the number of bytes
-				// This is a stupid implementation but tonight
-				// is not the night for doing this properly
-				if len(v.(string)) == 17 {
-					if v.(string)[2] == ':' {
-						return 6
-					}
-				}
-
 				// check if it's a number
 				// if so, return 1 byte
 				if _, err := strconv.ParseInt(v.(string), 10, 64); err == nil {
@@ -64,6 +56,15 @@ func main() {
 				if len(v.(string)) < 2 {
 					return -1
 				}
+
+				// check if v is in hex colon notation
+				// if so, return the number of bytes
+				// This is a stupid implementation but tonight
+				// is not the night for doing this properly
+				if v.(string)[2] == ':' {
+					return (len(v.(string)) + 1) / 3
+				}
+
 				// check if v is an IPv4 address
 				// if so, return the number of bytes
 				// check format with regex
@@ -76,6 +77,8 @@ func main() {
 					return (len(v.(string)) - 2) / 2
 				}
 
+				return len(v.(string))
+
 			}
 			return -1
 		},
@@ -87,6 +90,10 @@ func main() {
 	newMap["2"] = frameData.WsSource.Layers["eth"]
 	newMap["3"] = frameData.WsSource.Layers["ip"]
 	newMap["4"] = frameData.WsSource.Layers["icmp"]
+	newMap["5"] = map[string]interface{}{
+		"Data": hexToASCII(
+			frameData.WsSource.Layers["icmp"].(map[string]interface{})["data"].(map[string]interface{})["data.data"].(string)),
+	}
 
 	t, err := template.New("packet").Funcs(funcMap).Parse(string(tmplFile))
 	if err != nil {
@@ -159,4 +166,19 @@ func fieldchange(v interface{}) string {
 	}
 	return v.(string)
 
+}
+
+func hexToASCII(hexString string) string {
+	hexValues := strings.Split(hexString, ":")
+
+	var asciiBytes []byte
+	for _, hexVal := range hexValues {
+		decodedByte, err := hex.DecodeString(hexVal)
+		if err != nil {
+			return ""
+		}
+		asciiBytes = append(asciiBytes, decodedByte...)
+	}
+
+	return string(asciiBytes)
 }
