@@ -20,6 +20,7 @@
     .field-item {
       margin: 3px;
       padding: 3px;
+      /*width: 5em;*/
     }
     .toggle:checked ~ .field {
       display: none;
@@ -27,6 +28,10 @@
     
     .field-name {
       height: 4em;
+    }
+
+    .field-value {
+      word-wrap: break-word;
     }
 
   </style>

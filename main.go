@@ -117,13 +117,22 @@ func main() {
 		eth, _ := frameData.WsSource.Layers["eth"].(map[string]interface{})
 		ip, _ := frameData.WsSource.Layers["ip"].(map[string]interface{})
 		order := []map[string]interface{}{{"eth.dst": eth["eth.dst"].(string)}, {"eth.src": eth["eth.src"].(string)},
-			{"eth.type": eth["eth.type"].(string)}, {"ip.version": ip["ip.version"].(string)},
-			{"ip.hdr_len": ip["ip.hdr_len"].(string)}, {"ip.dsfield": ip["ip.dsfield"].(string)},
-			{"ip.len": ip["ip.len"].(string)}, {"ip.id": ip["ip.id"].(string)}, {"ip.flags": ip["ip.flags"].(string)},
-			{"ip.frag_offset": ip["ip.frag_offset"].(string)}, {"ip.ttl": ip["ip.ttl"].(string)},
-			{"ip.proto": ip["ip.proto"].(string)}, {"ip.checksum": ip["ip.checksum"].(string)},
-			{"ip.src": ip["ip.src"].(string)}, {"ip.dst": ip["ip.dst"].(string)}}
-
+			{"eth.type": eth["eth.type"].(string)},
+		}
+		// check for eth padding
+		if _, ok := eth["eth.padding"]; ok {
+			order = append(order, map[string]interface{}{"eth.padding": eth["eth.padding"].(string)})
+		}
+		// check for IP
+		if _, ok := frameData.WsSource.Layers["ip"]; ok {
+			order = append(order, map[string]interface{}{"ip.version": ip["ip.version"].(string)},
+				map[string]interface{}{"ip.hdr_len": ip["ip.hdr_len"].(string)}, map[string]interface{}{"ip.dsfield": ip["ip.dsfield"].(string)},
+				map[string]interface{}{"ip.len": ip["ip.len"].(string)}, map[string]interface{}{"ip.id": ip["ip.id"].(string)},
+				map[string]interface{}{"ip.flags": ip["ip.flags"].(string)}, map[string]interface{}{"ip.frag_offset": ip["ip.frag_offset"].(string)},
+				map[string]interface{}{"ip.ttl": ip["ip.ttl"].(string)}, map[string]interface{}{"ip.proto": ip["ip.proto"].(string)},
+				map[string]interface{}{"ip.checksum": ip["ip.checksum"].(string)}, map[string]interface{}{"ip.src": ip["ip.src"].(string)},
+				map[string]interface{}{"ip.dst": ip["ip.dst"].(string)})
+		}
 		switch *sorted {
 		case "icmp":
 			icmp, _ := frameData.WsSource.Layers["icmp"].(map[string]interface{})
@@ -131,6 +140,21 @@ func main() {
 				map[string]interface{}{"icmp.type": icmp["icmp.type"].(string)}, map[string]interface{}{"icmp.code": icmp["icmp.code"].(string)},
 				map[string]interface{}{"icmp.checksum": icmp["icmp.checksum"].(string)}, map[string]interface{}{"icmp.ident": icmp["icmp.ident"].(string)},
 				map[string]interface{}{"icmp.seq": icmp["icmp.seq"].(string)})
+			if _, ok := icmp["data"]; ok {
+				order = append(order, map[string]interface{}{"Data": hexToASCII(
+					frameData.WsSource.Layers["icmp"].(map[string]interface{})["data"].(map[string]interface{})["data.data"].(string))})
+			}
+
+		case "arp":
+			arp, _ := frameData.WsSource.Layers["arp"].(map[string]interface{})
+			order = append(order,
+				map[string]interface{}{"arp.hw.type": arp["arp.hw.type"].(string)}, map[string]interface{}{"arp.proto.type": arp["arp.proto.type"].(string)},
+				map[string]interface{}{"arp.hw.size": arp["arp.hw.size"].(string)}, map[string]interface{}{"arp.proto.size": arp["arp.proto.size"].(string)},
+				map[string]interface{}{"arp.opcode": arp["arp.opcode"].(string)}, map[string]interface{}{"arp.src.hw_mac": arp["arp.src.hw_mac"].(string)},
+				map[string]interface{}{"arp.src.proto_ipv4": arp["arp.src.proto_ipv4"].(string)},
+				map[string]interface{}{"arp.dst.hw_mac": arp["arp.dst.hw_mac"].(string)},
+				map[string]interface{}{"arp.dst.proto_ipv4": arp["arp.dst.proto_ipv4"].(string)},
+			)
 		default:
 			panic("Invalid sort")
 		}
@@ -235,12 +259,22 @@ func fieldchange(v interface{}) string {
 func hexToASCII(hexString string) string {
 	hexValues := strings.Split(hexString, ":")
 
+	/*
+		// I thought this was a good idea but it messes with the count...
+		// I'll let it just be empty, whatever
+		allNullMatch, _ := regexp.Match(`^(?:00:)+00$`, []byte(hexString))
+		if allNullMatch {
+			return "null"
+		}
+	*/
+
 	var asciiBytes []byte
 	for _, hexVal := range hexValues {
 		decodedByte, err := hex.DecodeString(hexVal)
 		if err != nil {
 			return ""
 		}
+
 		asciiBytes = append(asciiBytes, decodedByte...)
 	}
 
