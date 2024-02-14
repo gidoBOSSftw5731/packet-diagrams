@@ -21,6 +21,11 @@ var (
 	sorted       *string = flag.String("sort", "", "sort fields automatically based on protocol")
 )
 
+type PacketTemplate struct {
+	PacketData             map[string]interface{}
+	FieldDescriptionString string
+}
+
 func main() {
 	// parse flags
 	flag.Parse()
@@ -171,7 +176,14 @@ func main() {
 	}
 	var buf bytes.Buffer
 
-	err = t.Execute(&buf, &newMap)
+	fieldDescs := ""
+	for _, entry := range newMap {
+		for name, _ := range entry.(map[string]interface{}) {
+			fieldDescs += fmt.Sprintf("%v: %v\n<br>", fieldchange(name), FieldDescriptions[name])
+		}
+	}
+
+	err = t.Execute(&buf, &PacketTemplate{PacketData: newMap, FieldDescriptionString: fieldDescs})
 	if err != nil {
 		panic(err)
 	}
@@ -279,4 +291,39 @@ func hexToASCII(hexString string) string {
 	}
 
 	return string(asciiBytes)
+}
+
+// FieldDescriptions contains descriptions of fields in a packet
+var FieldDescriptions = map[string]string{
+	"eth.dst":            "The Destination MAC address is the address that the frame is being sent to",
+	"eth.src":            "The Source MAC address is the address that the frame is being sent from",
+	"eth.type":           "The Ethernet Type is the type of frame being sent, like an IP packet or ARP packet",
+	"ip.src":             "The Source IP address is the address that the packet is being sent from",
+	"ip.dst":             "The Destination IP address is the address that the packet is being sent to",
+	"ip.proto":           "The Layer 3 Protocol is the protocol that the packet is using, usually TCP, UDP, or ICMP",
+	"ip.ttl":             "The Time to Live is the number of hops the packet can take before being dropped. This is implemented to prevent routing loops from causing issues",
+	"ip.hdr_len":         "The length of the IP Header",
+	"ip.dsfield":         "The Differentiated Services Field is used to differentiate between different types of traffic, usually for Quality of Service purposes",
+	"ip.len":             "The length of the IP packet",
+	"ip.id":              "A unique identifier for the packet",
+	"ip.flags":           "The flags for the IP packet which help identify some edge cases (like fragmentation)",
+	"ip.frag_offset":     "The fragment offset for the IP packet which helps reconstruct fragmented packets",
+	"ip.checksum":        "A checksum of the header to verify the integrity of the header",
+	"ip.version":         "The version of the IP protocol being used",
+	"icmp.type":          "The type of ICMP packet being sent, like an echo request or echo reply",
+	"icmp.code":          "The code for an ICMP packet is used to determine some more advanced information about the packet, like who can recieve it",
+	"icmp.checksum":      "A checksum of the ICMP Packet header to verify the integrity of the header",
+	"icmp.ident":         "Helps identify the ICMP packet, especially for echo requests and replies",
+	"icmp.seq":           "The sequence number for the ICMP packet which helps identify the order of packets",
+	"icmp.data":          "The data for the ICMP packet, usually just the alphabet though there are some uses of this field",
+	"Data":               "The data for the ICMP packet, usually just the alphabet though there are some uses of this field",
+	"arp.hw.type":        "The hardware type for the ARP packet",
+	"arp.proto.type":     "The hardware type is almost always Ethernet, but it can be something else like Infiniband or Token Ring",
+	"arp.hw.size":        "This is the length of the hardware address, usually 6 bytes for Ethernet",
+	"arp.proto.size":     "This is the length of the protocol address, usually 4 bytes for IPv4",
+	"arp.opcode":         "The opcode for the ARP packet, if it's a request or a reply",
+	"arp.src.hw_mac":     "The source hardware address for the ARP packet",
+	"arp.src.proto_ipv4": "The source protocol address for the ARP packet",
+	"arp.dst.hw_mac":     "The destination hardware address for the ARP packet",
+	"arp.dst.proto_ipv4": "The destination protocol address for the ARP packet",
 }

@@ -39,7 +39,7 @@
 <body>
   <div class="packet">
     
-    {{ range $name, $layerval := . }}
+    {{ range $name, $layerval := .PacketData }}
 
       
       {{- range $field, $contents := $layerval }}
@@ -58,6 +58,10 @@
   </div>
   <input type="button" class="deletebutton"
    onclick="const elements = document.getElementsByClassName('deletebutton');for (let i = 0; i < elements.length; i++) {elements[i].style.display = 'none';}" /> 
+
+   <div>
+    {{ .FieldDescriptionString }}
+   </div>
 
    <script>
     const container = document.querySelector('.packet');
